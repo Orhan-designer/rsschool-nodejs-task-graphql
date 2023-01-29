@@ -6,7 +6,9 @@ import type { PostEntity } from '../../utils/DB/entities/DBPosts';
 const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
   fastify
 ): Promise<void> => {
-  fastify.get('/', async function (request, reply): Promise<PostEntity[]> {});
+  fastify.get('/', async function (request, reply): Promise<PostEntity[]> {
+    return await this.db.posts.findMany();
+  });
 
   fastify.get(
     '/:id',
@@ -15,7 +17,15 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
         params: idParamSchema,
       },
     },
-    async function (request, reply): Promise<PostEntity> {}
+    async function (request, reply): Promise<PostEntity | null> {
+      const post = await this.db.posts.findOne({ key: 'id', equals: request.params.id });
+
+      if (!post) {
+        throw reply.notFound(`Post ${post} not found!`);
+      }
+
+      return post;
+    }
   );
 
   fastify.post(
@@ -25,7 +35,9 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
         body: createPostBodySchema,
       },
     },
-    async function (request, reply): Promise<PostEntity> {}
+    async function (request, reply): Promise<PostEntity> {
+      return await this.db.posts.create(request.body);
+    }
   );
 
   fastify.delete(
@@ -35,7 +47,13 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
         params: idParamSchema,
       },
     },
-    async function (request, reply): Promise<PostEntity> {}
+    async function (request, reply): Promise<PostEntity> {
+      try {
+        return await this.db.posts.delete(request.params.id);
+      } catch (error: any) {
+        throw reply.badRequest(error.message);
+      }
+    }
   );
 
   fastify.patch(
@@ -46,7 +64,13 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
         params: idParamSchema,
       },
     },
-    async function (request, reply): Promise<PostEntity> {}
+    async function (request, reply): Promise<PostEntity> {
+      try {
+        return await this.db.posts.change(request.params.id, request.body);
+      } catch (error: any) {
+        throw reply.badRequest(error.message);
+      }
+    }
   );
 };
 
